@@ -51,13 +51,13 @@ entity ipbus_jadepix_device is
     spi_busy : in  std_logic;
 
     -- chip config fifo
-    cfg_start      : out std_logic;
-    cfg_sync       : out jadepix_cfg;
-    cfg_fifo_rst   : out std_logic;
-    cfg_busy       : in  std_logic;
-    cfg_fifo_empty : in  std_logic;
-    cfg_fifo_pfull : in  std_logic;
-    cfg_fifo_count : in  std_logic_vector(CFG_FIFO_COUNT_WITDH-1 downto 0);
+    cfg_start    : out std_logic;
+    cfg_sync     : out jadepix_cfg;
+    cfg_fifo_rst : out std_logic;
+    cfg_busy     : in  std_logic;
+--    cfg_fifo_empty : in  std_logic;
+--    cfg_fifo_pfull : in  std_logic;
+--    cfg_fifo_count : in  std_logic_vector(CFG_FIFO_COUNT_WITDH-1 downto 0);
 
     CACHE_BIT_SET : out std_logic_vector(3 downto 0);
 
@@ -99,18 +99,20 @@ entity ipbus_jadepix_device is
     SERIALIZER_RST : out std_logic;
 
     -- FIFO
-    ctrl_fifo_rst          : in  std_logic;
-    slow_ctrl_fifo_rd_clk  : in  std_logic;
-    slow_ctrl_fifo_rd_en   : in  std_logic;
-    slow_ctrl_fifo_valid   : out std_logic;
-    slow_ctrl_fifo_empty   : out std_logic;
-    slow_ctrl_fifo_rd_dout : out std_logic_vector(31 downto 0);
-    data_fifo_rst          : in  std_logic;
-    data_fifo_wr_clk       : in  std_logic;
-    data_fifo_wr_en        : in  std_logic;
-    data_fifo_wr_din       : in  std_logic_vector(31 downto 0);
-    data_fifo_full         : out std_logic;
-    data_fifo_almost_full  : out std_logic;
+    ctrl_fifo_rst                : in  std_logic;
+    slow_ctrl_fifo_rd_clk        : in  std_logic;
+    slow_ctrl_fifo_rd_en         : in  std_logic;
+    slow_ctrl_fifo_valid         : out std_logic;
+    slow_ctrl_fifo_empty         : out std_logic;
+    slow_ctrl_fifo_prog_full     : out std_logic;
+    slow_ctrl_fifo_wr_data_count : out std_logic_vector(17 downto 0);
+    slow_ctrl_fifo_rd_dout       : out std_logic_vector(31 downto 0);
+    data_fifo_rst                : in  std_logic;
+    data_fifo_wr_clk             : in  std_logic;
+    data_fifo_wr_en              : in  std_logic;
+    data_fifo_wr_din             : in  std_logic_vector(31 downto 0);
+    data_fifo_full               : out std_logic;
+    data_fifo_almost_full        : out std_logic;
 
     -- Test pattern
     valid_len : out integer range 0 to 16
@@ -133,8 +135,9 @@ architecture behv of ipbus_jadepix_device is
   signal rfifo_wr_din                                             : std_logic_vector(32*integer_max(N_RFIFO, 1)-1 downto 0);
   signal rfifo_wr_clk, rfifo_wr_en, rfifo_full, rfifo_almost_full : std_logic_vector(integer_max(N_RFIFO, 1)-1 downto 0);
 
-  signal wfifo_rd_clk, wfifo_rd_en, wfifo_valid, wfifo_empty : std_logic_vector(integer_max(N_WFIFO, 1)-1 downto 0);
-  signal wfifo_rd_dout                                       : std_logic_vector(32*integer_max(N_WFIFO, 1)-1 downto 0);
+  signal wfifo_rd_clk, wfifo_rd_en, wfifo_valid, wfifo_empty, wfifo_prog_full : std_logic_vector(integer_max(N_WFIFO, 1)-1 downto 0);
+  signal wfifo_wr_data_count                                                  : std_logic_vector(18*integer_max(N_WFIFO, 1)-1 downto 0);
+  signal wfifo_rd_dout                                                        : std_logic_vector(32*integer_max(N_WFIFO, 1)-1 downto 0);
 
   signal cfg_start_tmp     : std_logic;
   signal rs_start_tmp      : std_logic;
@@ -182,6 +185,8 @@ begin
   wfifo_rd_en(WFIFO_ADDR_SLOW_CTRL_CMD)  <= slow_ctrl_fifo_rd_en;
   slow_ctrl_fifo_valid                   <= wfifo_valid(WFIFO_ADDR_SLOW_CTRL_CMD);
   slow_ctrl_fifo_empty                   <= wfifo_empty(WFIFO_ADDR_SLOW_CTRL_CMD);
+  slow_ctrl_fifo_prog_full               <= wfifo_prog_full(WFIFO_ADDR_SLOW_CTRL_CMD);
+  slow_ctrl_fifo_wr_data_count           <= wfifo_wr_data_count((WFIFO_ADDR_SLOW_CTRL_CMD+1)*18-1 downto WFIFO_ADDR_SLOW_CTRL_CMD*18);
   slow_ctrl_fifo_rd_dout                 <= wfifo_rd_dout((WFIFO_ADDR_SLOW_CTRL_CMD+1)*32-1 downto WFIFO_ADDR_SLOW_CTRL_CMD*32);
 
   rfifo_wr_clk(RFIFO_ADDR_DATA_FIFO)                                         <= data_fifo_wr_clk;
@@ -215,18 +220,19 @@ begin
       stat_reg_stb => open,
 
       -- FIFO
-      wfifo_rst         => ctrl_fifo_rst,
-      wfifo_rd_clk      => wfifo_rd_clk,
-      wfifo_rd_en       => wfifo_rd_en,
-      wfifo_valid       => wfifo_valid,
-      wfifo_empty       => wfifo_empty,
-      wfifo_rd_dout     => wfifo_rd_dout,
-      rfifo_rst         => data_fifo_rst or rst_rfifo,
-      rfifo_wr_clk      => rfifo_wr_clk,
-      rfifo_wr_en       => rfifo_wr_en,
-      rfifo_full        => rfifo_full,
-      rfifo_almost_full => rfifo_almost_full,
-      rfifo_wr_din      => rfifo_wr_din
+      wfifo_rst           => ctrl_fifo_rst,
+      wfifo_rd_clk        => wfifo_rd_clk,
+      wfifo_rd_en         => wfifo_rd_en,
+      wfifo_valid         => wfifo_valid,
+      wfifo_prog_full     => wfifo_prog_full,
+      wfifo_wr_data_count => wfifo_wr_data_count,
+      wfifo_rd_dout       => wfifo_rd_dout,
+      rfifo_rst           => data_fifo_rst or rst_rfifo,
+      rfifo_wr_clk        => rfifo_wr_clk,
+      rfifo_wr_en         => rfifo_wr_en,
+      rfifo_full          => rfifo_full,
+      rfifo_almost_full   => rfifo_almost_full,
+      rfifo_wr_din        => rfifo_wr_din
       );
 
   -- control
@@ -314,9 +320,9 @@ begin
       stat(0)(2) <= gs_busy;
       stat(0)(3) <= spi_busy;
 
-      stat(1)(0)           <= cfg_fifo_empty;
-      stat(1)(1)           <= cfg_fifo_pfull;
-      stat(1)(18 downto 2) <= cfg_fifo_count;
+      stat(1)(0)           <= slow_ctrl_fifo_empty;
+      stat(1)(1)           <= '0';
+      stat(1)(18 downto 2) <= (others => '0');
 
     end if;
   end process;

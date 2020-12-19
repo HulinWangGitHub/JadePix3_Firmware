@@ -34,13 +34,13 @@ entity ipbus_payload is
 
     -- JadePix
     -- chip config fifo
-    cfg_start      : out std_logic;
-    cfg_sync       : out jadepix_cfg;
-    cfg_fifo_rst   : out std_logic;
-    cfg_busy       : in  std_logic;
-    cfg_fifo_empty : in  std_logic;
-    cfg_fifo_pfull : in  std_logic;
-    cfg_fifo_count : in  std_logic_vector(CFG_FIFO_COUNT_WITDH-1 downto 0);
+    cfg_start    : out std_logic;
+    cfg_sync     : out jadepix_cfg;
+    cfg_fifo_rst : out std_logic;
+    cfg_busy     : in  std_logic;
+--    cfg_fifo_empty : in  std_logic;
+--    cfg_fifo_pfull : in  std_logic;
+--    cfg_fifo_count : in  std_logic_vector(CFG_FIFO_COUNT_WITDH-1 downto 0);
 
     CACHE_BIT_SET : out std_logic_vector(3 downto 0);
 
@@ -83,18 +83,20 @@ entity ipbus_payload is
     SERIALIZER_RST : out std_logic;
 
     -- FIFO
-    ctrl_fifo_rst          : in  std_logic;
-    slow_ctrl_fifo_rd_clk  : in  std_logic;
-    slow_ctrl_fifo_rd_en   : in  std_logic;
-    slow_ctrl_fifo_valid   : out std_logic;
-    slow_ctrl_fifo_empty   : out std_logic;
-    slow_ctrl_fifo_rd_dout : out std_logic_vector(31 downto 0);
-    data_fifo_rst          : in  std_logic;
-    data_fifo_wr_clk       : in  std_logic;
-    data_fifo_wr_en        : in  std_logic;
-    data_fifo_wr_din       : in  std_logic_vector(31 downto 0);
-    data_fifo_full         : out std_logic;
-    data_fifo_almost_full  : out std_logic;
+    ctrl_fifo_rst                : in  std_logic;
+    slow_ctrl_fifo_rd_clk        : in  std_logic;
+    slow_ctrl_fifo_rd_en         : in  std_logic;
+    slow_ctrl_fifo_valid         : out std_logic;
+    slow_ctrl_fifo_empty         : out std_logic;
+    slow_ctrl_fifo_prog_full     : out std_logic;
+    slow_ctrl_fifo_wr_data_count : out std_logic_vector(17 downto 0);
+    slow_ctrl_fifo_rd_dout       : out std_logic_vector(31 downto 0);
+    data_fifo_rst                : in  std_logic;
+    data_fifo_wr_clk             : in  std_logic;
+    data_fifo_wr_en              : in  std_logic;
+    data_fifo_wr_din             : in  std_logic_vector(31 downto 0);
+    data_fifo_full               : out std_logic;
+    data_fifo_almost_full        : out std_logic;
 
     -- SPI Master
     ss   : out std_logic_vector(N_SS - 1 downto 0);
@@ -189,13 +191,13 @@ begin
       spi_rst  => spi_rst,
       spi_busy => spi_busy,
 
-      cfg_start      => cfg_start,
-      cfg_sync       => cfg_sync,
-      cfg_fifo_rst   => cfg_fifo_rst,
-      cfg_busy       => cfg_busy,
-      cfg_fifo_empty => cfg_fifo_empty,
-      cfg_fifo_pfull => cfg_fifo_pfull,
-      cfg_fifo_count => cfg_fifo_count,
+      cfg_start    => cfg_start,
+      cfg_sync     => cfg_sync,
+      cfg_fifo_rst => cfg_fifo_rst,
+      cfg_busy     => cfg_busy,
+--      cfg_fifo_empty => cfg_fifo_empty,
+--      cfg_fifo_pfull => cfg_fifo_pfull,
+--      cfg_fifo_count => cfg_fifo_count,
 
       CACHE_BIT_SET => CACHE_BIT_SET,
 
@@ -238,18 +240,20 @@ begin
       SERIALIZER_RST => SERIALIZER_RST,
 
       --FIFO
-      ctrl_fifo_rst          => ctrl_fifo_rst,
-      slow_ctrl_fifo_rd_clk  => slow_ctrl_fifo_rd_clk,
-      slow_ctrl_fifo_rd_en   => slow_ctrl_fifo_rd_en,
-      slow_ctrl_fifo_valid   => slow_ctrl_fifo_valid,
-      slow_ctrl_fifo_empty   => slow_ctrl_fifo_empty,
-      slow_ctrl_fifo_rd_dout => slow_ctrl_fifo_rd_dout,
-      data_fifo_rst          => data_fifo_rst,
-      data_fifo_wr_clk       => data_fifo_wr_clk,
-      data_fifo_wr_en        => data_fifo_wr_en,
-      data_fifo_full         => data_fifo_full,
-      data_fifo_almost_full  => data_fifo_almost_full,
-      data_fifo_wr_din       => data_fifo_wr_din,
+      ctrl_fifo_rst                => ctrl_fifo_rst,
+      slow_ctrl_fifo_rd_clk        => slow_ctrl_fifo_rd_clk,
+      slow_ctrl_fifo_rd_en         => slow_ctrl_fifo_rd_en,
+      slow_ctrl_fifo_valid         => slow_ctrl_fifo_valid,
+      slow_ctrl_fifo_empty         => slow_ctrl_fifo_empty,
+      slow_ctrl_fifo_prog_full     => slow_ctrl_fifo_prog_full,
+      slow_ctrl_fifo_wr_data_count => slow_ctrl_fifo_wr_data_count,
+      slow_ctrl_fifo_rd_dout       => slow_ctrl_fifo_rd_dout,
+      data_fifo_rst                => data_fifo_rst,
+      data_fifo_wr_clk             => data_fifo_wr_clk,
+      data_fifo_wr_en              => data_fifo_wr_en,
+      data_fifo_full               => data_fifo_full,
+      data_fifo_almost_full        => data_fifo_almost_full,
+      data_fifo_wr_din             => data_fifo_wr_din,
 
       valid_len => valid_len
 

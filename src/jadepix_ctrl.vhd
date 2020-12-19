@@ -56,10 +56,13 @@ entity jadepix_ctrl is
     -- chip config fifo
     cfg_sync       : in  jadepix_cfg;
     cfg_fifo_rst   : in  std_logic;
+    cfg_dout       : out std_logic_vector(2 downto 0);
+    cfg_rd_en      : out std_logic;
+    cfg_dout_valid : out std_logic;
     cfg_busy       : out std_logic;
-    cfg_fifo_empty : out std_logic;
-    cfg_fifo_pfull : out std_logic;
-    cfg_fifo_count : out std_logic_vector(16 downto 0);
+    cfg_fifo_empty : in std_logic;
+    cfg_fifo_pfull : in std_logic;
+    cfg_fifo_count : in std_logic_vector(17 downto 0);
 
     digsel_en_rs : out std_logic;
     anasel_en_gs : out std_logic;
@@ -116,8 +119,8 @@ architecture behv of jadepix_ctrl is
 
   -- FIFO
   signal empty, prog_full, fifo_rst : std_logic;
-  signal cfg_dout                   : std_logic_vector(2 downto 0);
-  signal cfg_rd_en, cfg_dout_valid  : std_logic;
+--  signal cfg_dout                   : std_logic_vector(2 downto 0);
+--  signal cfg_rd_en, cfg_dout_valid  : std_logic;
   signal pix_cnt                    : integer range 0 to (N_ROW * N_COL - 1) := 0;
   signal cfg_cnt                    : integer range 0 to JADEPIX_CFG_CNT_MAX := 0;
 
@@ -696,20 +699,20 @@ begin
     end if;
   end process;
 
-  conf_fifo : fifo_generator_0
-    port map (
-      clk        => clk,
-      srst       => fifo_rst,
-      din        => cfg_sync.din,
-      wr_en      => cfg_sync.wr_en,
-      rd_en      => cfg_rd_en,
-      dout       => cfg_dout,
-      full       => open,
-      empty      => cfg_fifo_empty,
-      valid      => cfg_dout_valid,
-      data_count => cfg_fifo_count,
-      prog_full  => cfg_fifo_pfull
-      );
+--  conf_fifo : fifo_generator_0
+--    port map (
+--      clk        => clk,
+--      srst       => fifo_rst,
+--      din        => cfg_sync.din,
+--      wr_en      => cfg_sync.wr_en,
+--      rd_en      => cfg_rd_en,
+--      dout       => cfg_dout,
+--      full       => open,
+--      empty      => cfg_fifo_empty,
+--      valid      => cfg_dout_valid,
+--      data_count => cfg_fifo_count,
+--      prog_full  => cfg_fifo_pfull
+--      );
 
 
 end behv;
