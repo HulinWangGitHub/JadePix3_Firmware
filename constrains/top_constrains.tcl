@@ -163,7 +163,7 @@ set_property IOSTANDARD LVCMOS18 [get_ports APLSE]
 set_property PACKAGE_PIN G15 [get_ports RD_EN]
 set_property IOSTANDARD LVCMOS18 [get_ports RD_EN]
 #set_property PACKAGE_PIN E3 [get_ports PDB]
-
+#set_property IOSTANDARD LVCMOS18 [get_ports PDB]
 
 set_property IOSTANDARD LVCMOS18 [get_ports {BLK_SELECT[*]}]
 set_property PACKAGE_PIN B29 [get_ports BLK_SELECT[0]]
