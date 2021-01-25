@@ -250,7 +250,6 @@ architecture rtl of JadePix3_Readout is
 
   attribute mark_debug of BLK_SELECT   : signal is "true";
   attribute mark_debug of FIFO_READ_EN : signal is "true";
-  attribute mark_debug of CACHE_CLK    : signal is "true";
   attribute mark_debug of HIT_RST      : signal is "true";
 
   attribute mark_debug of CA             : signal is "true";

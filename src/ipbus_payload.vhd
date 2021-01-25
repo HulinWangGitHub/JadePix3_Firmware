@@ -38,9 +38,9 @@ entity ipbus_payload is
     cfg_sync     : out jadepix_cfg;
     cfg_fifo_rst : out std_logic;
     cfg_busy     : in  std_logic;
---    cfg_fifo_empty : in  std_logic;
---    cfg_fifo_pfull : in  std_logic;
---    cfg_fifo_count : in  std_logic_vector(CFG_FIFO_COUNT_WITDH-1 downto 0);
+    cfg_fifo_empty : in  std_logic;
+    cfg_fifo_pfull : in  std_logic;
+    cfg_fifo_count : in  std_logic_vector(CFG_FIFO_COUNT_WITDH-1 downto 0);
 
     INQUIRY       : out std_logic_vector(1 downto 0);
     CACHE_BIT_SET : out std_logic_vector(3 downto 0);
