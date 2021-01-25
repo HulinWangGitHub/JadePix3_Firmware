@@ -42,6 +42,7 @@ entity ipbus_payload is
 --    cfg_fifo_pfull : in  std_logic;
 --    cfg_fifo_count : in  std_logic_vector(CFG_FIFO_COUNT_WITDH-1 downto 0);
 
+    INQUIRY       : out std_logic_vector(1 downto 0);
     CACHE_BIT_SET : out std_logic_vector(3 downto 0);
 
     hitmap_col_low  : out std_logic_vector(COL_WIDTH-1 downto 0);
@@ -103,6 +104,17 @@ entity ipbus_payload is
     mosi : out std_logic;
     miso : in  std_logic;
     sclk : out std_logic;
+
+    -- DEBUG
+    debug               : out std_logic;
+    hit_rst             : out std_logic;
+    ca_en               : out std_logic;
+    sel_chip_clk        : out std_logic;
+    ca_soft             : out std_logic_vector(COL_WIDTH-1 downto 0);
+    blk_sel_def         : out std_logic_vector(1 downto 0);
+    cfg_add_factor_t0 : out std_logic_vector(7 downto 0);
+    cfg_add_factor_t1 : out std_logic_vector(15 downto 0);
+    cfg_add_factor_t2 : out std_logic_vector(7 downto 0);
 
     valid_len : out integer range 0 to 16
 
@@ -199,6 +211,7 @@ begin
 --      cfg_fifo_pfull => cfg_fifo_pfull,
 --      cfg_fifo_count => cfg_fifo_count,
 
+      INQUIRY       => INQUIRY,
       CACHE_BIT_SET => CACHE_BIT_SET,
 
       hitmap_col_low  => hitmap_col_low,
@@ -230,14 +243,19 @@ begin
       digsel_en_soft => digsel_en_soft,
       load_soft      => load_soft,
 
-      PDB            => PDB,
-      SN_OEn         => SN_OEn,
-      POR            => POR,
-      EN_diff        => EN_diff,
-      Ref_clk_1G_f   => Ref_clk_1G_f,
-      CLK_SEL        => CLK_SEL,
-      D_RST          => D_RST,
-      SERIALIZER_RST => SERIALIZER_RST,
+      PDB                 => PDB,
+      SN_OEn              => SN_OEn,
+      POR                 => POR,
+      EN_diff             => EN_diff,
+      Ref_clk_1G_f        => Ref_clk_1G_f,
+      CLK_SEL             => CLK_SEL,
+      D_RST               => D_RST,
+      SERIALIZER_RST      => SERIALIZER_RST,
+      sel_chip_clk        => sel_chip_clk,
+      blk_sel_def         => blk_sel_def,
+      cfg_add_factor_t0 => cfg_add_factor_t0,
+      cfg_add_factor_t1 => cfg_add_factor_t1,
+      cfg_add_factor_t2 => cfg_add_factor_t2,
 
       --FIFO
       ctrl_fifo_rst                => ctrl_fifo_rst,
@@ -254,6 +272,12 @@ begin
       data_fifo_full               => data_fifo_full,
       data_fifo_almost_full        => data_fifo_almost_full,
       data_fifo_wr_din             => data_fifo_wr_din,
+
+      --DEBUG
+      debug   => debug,
+      ca_en   => ca_en,
+      ca_soft => ca_soft,
+      hit_rst => hit_rst,
 
       valid_len => valid_len
 

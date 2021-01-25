@@ -67,6 +67,8 @@ begin
   fifo_read_en <= fifo_read_en_v(to_integer(unsigned(blk_select)));
   fifo_oc      <= sector_counters_v(to_integer(unsigned(blk_select))).overflow_counter;
 
+--	fifo_data_valid <= fifo_read_en;
+
 
   delay_signals : process(all)
   begin

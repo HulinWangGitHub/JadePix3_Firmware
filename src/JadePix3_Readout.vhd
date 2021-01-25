@@ -68,6 +68,8 @@ entity JadePix3_Readout is port(
   CACHE_CLK : out std_logic;
   RX_FPGA   : out std_logic;
 
+  HITMAP_IN : in std_logic_vector(15 downto 0);
+
 --  LVDS_RX_IN_P : in std_logic;
 --  LVDS_RX_IN_N : in std_logic;
 
@@ -170,11 +172,11 @@ architecture rtl of JadePix3_Readout is
   signal is_busy_cache : std_logic;
 
   -- config FIFO signals
-  signal cfg_sync     : jadepix_cfg;
-  signal cfg_fifo_rst : std_logic;
---  signal cfg_fifo_empty : std_logic;
---  signal cfg_fifo_pfull : std_logic;
---  signal cfg_fifo_count : std_logic_vector(CFG_FIFO_COUNT_WITDH-1 downto 0);
+  signal cfg_sync       : jadepix_cfg;
+  signal cfg_fifo_rst   : std_logic;
+  signal cfg_fifo_empty : std_logic;
+  signal cfg_fifo_pfull : std_logic;
+  signal cfg_fifo_count : std_logic_vector(CFG_FIFO_COUNT_WITDH-1 downto 0);
 
   signal anasel_en_gs : std_logic;
   signal digsel_en_rs : std_logic;
@@ -213,6 +215,14 @@ architecture rtl of JadePix3_Readout is
   signal load_soft     : std_logic;
   signal spi_trans_end : std_logic;
 
+  -- DEBUG
+  signal debug         : std_logic;
+  signal ca_en_soft    : std_logic;
+  signal ca_en_logic   : std_logic;
+  signal ca_soft       : std_logic_vector(COL_WIDTH-1 downto 0);
+  signal ca_logic      : std_logic_vector(COL_WIDTH-1 downto 0);
+  signal hit_rst_soft  : std_logic;
+  signal hit_rst_logic : std_logic;
 
   -- Generate valid signal for testing
   signal valid_test : std_logic_vector(3 downto 0);
@@ -220,10 +230,53 @@ architecture rtl of JadePix3_Readout is
 
 
   -- for test
---  signal test_data_in_16 : unsigned(15 downto 0);
---  signal test_data_in_8  : unsigned(7 downto 0);
+  signal hitmap_r          : std_logic_vector(15 downto 0);
+  signal sel_chip_clk      : std_logic := '0';
+  signal rx_fpga_tmp       : std_logic := '0';
+  signal blk_sel_def       : std_logic_vector(1 downto 0);
+  signal cfg_add_factor_t0 : std_logic_vector(7 downto 0);
+  signal cfg_add_factor_t1 : std_logic_vector(15 downto 0);
+  signal cfg_add_factor_t2 : std_logic_vector(7 downto 0);
+
+  attribute mark_debug of hitmap_r  : signal is "true";
+  attribute mark_debug of DPLSE     : signal is "true";
+  attribute mark_debug of APLSE     : signal is "true";
+  attribute mark_debug of DIGSEL_EN : signal is "true";
+  attribute mark_debug of ANASEL_EN : signal is "true";
+  attribute mark_debug of GSHUTTER  : signal is "true";
+  attribute mark_debug of LOAD      : signal is "true";
+  attribute mark_debug of VALID_IN  : signal is "true";
+  attribute mark_debug of DATA_IN   : signal is "true";
+
+  attribute mark_debug of BLK_SELECT   : signal is "true";
+  attribute mark_debug of FIFO_READ_EN : signal is "true";
+  attribute mark_debug of CACHE_CLK    : signal is "true";
+  attribute mark_debug of HIT_RST      : signal is "true";
+
+  attribute mark_debug of CA             : signal is "true";
+  attribute mark_debug of CA_EN          : signal is "true";
+  attribute mark_debug of ca_soft        : signal is "true";
+  attribute mark_debug of hit_rst_soft   : signal is "true";
+  attribute mark_debug of hit_rst_logic  : signal is "true";
+  attribute mark_debug of ca_logic       : signal is "true";
+  attribute mark_debug of ca_en_soft     : signal is "true";
+  attribute mark_debug of ca_en_logic    : signal is "true";
+  attribute mark_debug of debug          : signal is "true";
+  attribute mark_debug of digsel_en_soft : signal is "true";
+  attribute mark_debug of anasel_en_soft : signal is "true";
+  attribute mark_debug of aplse_soft     : signal is "true";
+  attribute mark_debug of dplse_soft     : signal is "true";
+  attribute mark_debug of sel_chip_clk   : signal is "true";
+
 
 begin
+
+  process(clk_sys)
+  begin
+    if rising_edge(clk_sys) then
+      hitmap_r <= HITMAP_IN;
+    end if;
+  end process;
 
   OBUFDS_CACHE_CLK : OBUF
     generic map (
@@ -241,9 +294,18 @@ begin
       IOSTANDARD => "DEFAULT",
       SLEW       => "SLOW")
     port map (
-      O => RX_FPGA,  -- Buffer output (connect directly to top-level port)
-      I => clk_fpga                     -- Buffer input 
+      O => RX_FPGA,     -- Buffer output (connect directly to top-level port)
+      I => rx_fpga_tmp                  -- Buffer input
       );
+
+  BUFGMUX_CTRL_inst : BUFGMUX_CTRL
+    port map (
+      O  => rx_fpga_tmp,                -- 1-bit output: Clock output
+      I0 => clk_fpga,                   -- 1-bit input: Clock input (S=0)
+      I1 => clk_sys,                    -- 1-bit input: Clock input (S=1)
+      S  => sel_chip_clk                -- 1-bit input: Clock select
+      );
+
 
 
   ibufgds0 : IBUFGDS port map(
@@ -330,14 +392,15 @@ begin
       DAC_DATA   => DAC_DATA,
 
       -- JadePix
-      cfg_start    => cfg_start,
-      cfg_sync     => cfg_sync,
-      cfg_fifo_rst => cfg_fifo_rst,
-      cfg_busy     => cfg_busy,
---      cfg_fifo_empty => cfg_fifo_empty,
---      cfg_fifo_pfull => cfg_fifo_pfull,
---      cfg_fifo_count => cfg_fifo_count,
+      cfg_start      => cfg_start,
+      cfg_sync       => cfg_sync,
+      cfg_fifo_rst   => cfg_fifo_rst,
+      cfg_busy       => cfg_busy,
+      cfg_fifo_empty => cfg_fifo_empty,
+      cfg_fifo_pfull => cfg_fifo_pfull,
+      cfg_fifo_count => cfg_fifo_count,
 
+      INQUIRY       => INQUIRY,
       CACHE_BIT_SET => CACHE_BIT_SET,
 
       rs_start         => rs_start,
@@ -371,37 +434,45 @@ begin
 
       spi_trans_end => spi_trans_end,
 
-      PDB            => open,
-      SN_OEn         => SN_OEn,
-      POR            => POR,
-      EN_diff        => EN_diff,
-      Ref_clk_1G_f   => Ref_clk_1G_f,
-      CLK_SEL        => CLK_SEL,
-      D_RST          => D_RST,
-      SERIALIZER_RST => SERIALIZER_RST,
-
+      PDB               => open,
+      SN_OEn            => SN_OEn,
+      POR               => POR,
+      EN_diff           => EN_diff,
+      Ref_clk_1G_f      => Ref_clk_1G_f,
+      CLK_SEL           => CLK_SEL,
+      D_RST             => D_RST,
+      SERIALIZER_RST    => SERIALIZER_RST,
+      sel_chip_clk      => sel_chip_clk,
+      blk_sel_def       => blk_sel_def,
+      cfg_add_factor_t0 => cfg_add_factor_t0,
+      cfg_add_factor_t1 => cfg_add_factor_t1,
+      cfg_add_factor_t2 => cfg_add_factor_t2,
 
       -- FIFOs
-      ctrl_fifo_rst                => ctrl_fifo_rst,
-      slow_ctrl_fifo_rd_clk        => slow_ctrl_fifo_rd_clk,
-      slow_ctrl_fifo_rd_en         => slow_ctrl_fifo_rd_en,
-      slow_ctrl_fifo_valid         => slow_ctrl_fifo_valid,
-      slow_ctrl_fifo_empty         => slow_ctrl_fifo_empty,
-      slow_ctrl_fifo_prog_full     => slow_ctrl_fifo_prog_full,
-      slow_ctrl_fifo_wr_data_count => slow_ctrl_fifo_wr_data_count,
-      slow_ctrl_fifo_rd_dout       => slow_ctrl_fifo_rd_dout,
-      data_fifo_rst                => data_fifo_rst,
-      data_fifo_wr_clk             => data_fifo_wr_clk,
-      data_fifo_wr_en              => data_fifo_wr_en,
-      data_fifo_full               => data_fifo_full,
-      data_fifo_almost_full        => data_fifo_almost_full,
-      data_fifo_wr_din             => data_fifo_wr_din,
+      ctrl_fifo_rst          => ctrl_fifo_rst,
+      slow_ctrl_fifo_rd_clk  => slow_ctrl_fifo_rd_clk,
+      slow_ctrl_fifo_rd_en   => slow_ctrl_fifo_rd_en,
+      slow_ctrl_fifo_valid   => slow_ctrl_fifo_valid,
+      slow_ctrl_fifo_empty   => slow_ctrl_fifo_empty,
+      slow_ctrl_fifo_rd_dout => slow_ctrl_fifo_rd_dout,
+      data_fifo_rst          => data_fifo_rst,
+      data_fifo_wr_clk       => data_fifo_wr_clk,
+      data_fifo_wr_en        => data_fifo_wr_en,
+      data_fifo_full         => data_fifo_full,
+      data_fifo_almost_full  => data_fifo_almost_full,
+      data_fifo_wr_din       => data_fifo_wr_din,
 
       -- SPI master
       ss   => open,
       mosi => mosi,
       miso => miso,
-      sclk => sclk
+      sclk => sclk,
+
+      -- DEBUG
+      debug   => debug,
+      ca_en   => ca_en_soft,
+      ca_soft => ca_soft,
+      hit_rst => hit_rst_soft
       );
 
 
@@ -431,14 +502,16 @@ begin
       load_soft     => load_soft,
       LOAD          => LOAD,
 
-      cfg_sync     => cfg_sync,
-      cfg_fifo_rst => cfg_fifo_rst,
-
-      cfg_fifo_empty => slow_ctrl_fifo_empty,
-      cfg_fifo_pfull => slow_ctrl_fifo_prog_full,
-      cfg_fifo_count => slow_ctrl_fifo_wr_data_count,
-      cfg_busy       => cfg_busy,
-      cfg_start      => cfg_start,
+      cfg_sync          => cfg_sync,
+      cfg_fifo_rst      => cfg_fifo_rst,
+      cfg_fifo_empty    => cfg_fifo_empty,
+      cfg_fifo_pfull    => cfg_fifo_pfull,
+      cfg_fifo_count    => cfg_fifo_count,
+      cfg_busy          => cfg_busy,
+      cfg_start         => cfg_start,
+      cfg_add_factor_t0 => cfg_add_factor_t0,
+      cfg_add_factor_t1 => cfg_add_factor_t1,
+      cfg_add_factor_t2 => cfg_add_factor_t2,
 
       start_cache     => start_cache,
       clk_cache       => clk_cache,
@@ -450,10 +523,10 @@ begin
       hitmap_en       => hitmap_en,
       hitmap_num      => hitmap_num,
 
-      RA       => RA,
+      RA       => row_num,
       RA_EN    => RA_EN,
-      CA       => CA,
-      CA_EN    => CA_EN,
+      CA       => ca_logic,
+      CA_EN    => ca_en_logic,
       CON_SELM => CON_SELM,
       CON_SELP => CON_SELP,
       CON_DATA => CON_DATA,
@@ -463,7 +536,7 @@ begin
       rs_frame_num_set => rs_frame_num_set,
       rs_frame_cnt     => rs_frame_cnt,
 
-      HIT_RST => HIT_RST,
+      HIT_RST => hit_rst_logic,
       RD_EN   => RD_EN,
 
       MATRIX_GRST => MATRIX_GRST,
@@ -487,14 +560,28 @@ begin
       anasel_en_gs => anasel_en_gs
       );
 
-  DIGSEL_EN <= digsel_en_rs and digsel_en_soft;
-  ANASEL_EN <= anasel_en_gs and anasel_en_soft;
-  GSHUTTER  <= gshutter_gs or gshutter_soft;
-  APLSE     <= aplse_gs and aplse_soft;
-  DPLSE     <= dplse_gs and dplse_soft;
 
-  RA <= row_num;
+  for_debug : process(all)
+  begin
+    if debug = '0' then
+      DIGSEL_EN <= digsel_en_rs when digsel_en_soft = '1' else '0';
+      ANASEL_EN <= anasel_en_gs when anasel_en_soft = '1' else '0';
+      APLSE     <= aplse_gs     when aplse_soft = '1'     else '0';
+      DPLSE     <= dplse_gs     when dplse_soft = '1' else '0';
+      GSHUTTER  <= gshutter_gs or gshutter_soft;
+    else
+      DIGSEL_EN <= digsel_en_soft;
+      ANASEL_EN <= anasel_en_soft;
+      APLSE     <= aplse_soft;
+      DPLSE     <= dplse_soft;
+      GSHUTTER  <= gshutter_gs;
+    end if;
+  end process;
 
+  RA      <= row_num;
+  CA      <= ca_soft      when debug = '1' else ca_logic;
+  CA_EN   <= ca_en_soft   when debug = '1' else ca_en_logic;
+  HIT_RST <= hit_rst_soft when debug = '1' else hit_rst_logic;
 
   valid_test  <= (others => clk_cache);
   rd_data_rst <= rs_start or gs_start or clk_sys_rst;  -- when start rolling shutter or global shutter, reset data readout
@@ -513,13 +600,12 @@ begin
       frame_num => rs_frame_cnt,
       row       => row_num,
 
-      VALID_IN => valid_test,           -- for test
---      VALID_IN => "1100", -- for test
-      DATA_IN  => 8X"FF",
+      VALID_IN => VALID_IN,
+      DATA_IN  => DATA_IN,
 
       FIFO_READ_EN => FIFO_READ_EN,
       BLK_SELECT   => BLK_SELECT,
---      INQUIRY      => INQUIRY,
+      blk_sel_def  => blk_sel_def,
 
       -- DATA FIFO
       data_fifo_rst         => data_fifo_rst,

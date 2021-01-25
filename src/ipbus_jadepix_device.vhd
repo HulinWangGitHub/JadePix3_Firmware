@@ -1,4 +1,4 @@
-----------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
 -- Company: 
 -- Engineer: 
 -- 
@@ -60,6 +60,7 @@ entity ipbus_jadepix_device is
 --    cfg_fifo_count : in  std_logic_vector(CFG_FIFO_COUNT_WITDH-1 downto 0);
 
     CACHE_BIT_SET : out std_logic_vector(3 downto 0);
+    INQUIRY       : out std_logic_vector(1 downto 0);
 
     hitmap_col_low  : out std_logic_vector(COL_WIDTH-1 downto 0);
     hitmap_col_high : out std_logic_vector(COL_WIDTH-1 downto 0);
@@ -89,14 +90,19 @@ entity ipbus_jadepix_device is
     digsel_en_soft : out std_logic;
     load_soft      : out std_logic;
 
-    PDB            : out std_logic;
-    SN_OEn         : out std_logic;
-    POR            : out std_logic;
-    EN_diff        : out std_logic;
-    Ref_clk_1G_f   : out std_logic;
-    CLK_SEL        : out std_logic;
-    D_RST          : out std_logic;
-    SERIALIZER_RST : out std_logic;
+    PDB               : out std_logic;
+    SN_OEn            : out std_logic;
+    POR               : out std_logic;
+    EN_diff           : out std_logic;
+    Ref_clk_1G_f      : out std_logic;
+    CLK_SEL           : out std_logic;
+    D_RST             : out std_logic;
+    SERIALIZER_RST    : out std_logic;
+    sel_chip_clk      : out std_logic;
+    blk_sel_def       : out std_logic_vector(1 downto 0);
+    cfg_add_factor_t0 : out std_logic_vector(7 downto 0);
+    cfg_add_factor_t1 : out std_logic_vector(15 downto 0);
+    cfg_add_factor_t2 : out std_logic_vector(7 downto 0);
 
     -- FIFO
     ctrl_fifo_rst                : in  std_logic;
@@ -114,6 +120,12 @@ entity ipbus_jadepix_device is
     data_fifo_full               : out std_logic;
     data_fifo_almost_full        : out std_logic;
 
+    -- DEBUG
+    debug   : out std_logic;
+    hit_rst : out std_logic;
+    ca_en   : out std_logic;
+    ca_soft : out std_logic_vector(COL_WIDTH-1 downto 0);
+
     -- Test pattern
     valid_len : out integer range 0 to 16
     );
@@ -123,7 +135,7 @@ architecture behv of ipbus_jadepix_device is
   -- IPbus reg
   constant SYNC_REG_ENA               : boolean := false;
   constant N_STAT                     : integer := 2;
-  constant N_CTRL                     : integer := 10;
+  constant N_CTRL                     : integer := 11;
   constant N_WFIFO                    : integer := 1;
   constant N_RFIFO                    : integer := 1;
   signal stat                         : ipb_reg_v(N_STAT-1 downto 0);
@@ -175,6 +187,20 @@ architecture behv of ipbus_jadepix_device is
   attribute mark_debug of rfifo_wr_en       : signal is "true";
   attribute mark_debug of rfifo_almost_full : signal is "true";
   attribute mark_debug of rfifo_wr_din      : signal is "true";
+
+  attribute mark_debug of anasel_en_soft : signal is "true";
+  attribute mark_debug of digsel_en_soft : signal is "true";
+  attribute mark_debug of gs_sel_pulse   : signal is "true";
+
+  attribute mark_debug of debug             : signal is "true";
+  attribute mark_debug of ca_en             : signal is "true";
+  attribute mark_debug of ca_soft           : signal is "true";
+  attribute mark_debug of blk_sel_def       : signal is "true";
+  attribute mark_debug of sel_chip_clk      : signal is "true";
+  attribute mark_debug of cfg_add_factor_t0 : signal is "true";
+  attribute mark_debug of cfg_add_factor_t1 : signal is "true";
+  attribute mark_debug of cfg_add_factor_t2 : signal is "true";
+
 
 begin
   --------------------------------------------------------------
@@ -279,6 +305,18 @@ begin
 
       rst_rfifo      <= ctrl(9)(0);
       SERIALIZER_RST <= ctrl(9)(1);
+      INQUIRY        <= ctrl(9)(3 downto 2);
+      debug          <= ctrl(9)(4);
+      ca_soft        <= ctrl(9)(13 downto 5);
+      ca_en          <= ctrl(9)(14);
+      hit_rst        <= ctrl(9)(15);
+      sel_chip_clk   <= ctrl(9)(16);
+      blk_sel_def    <= ctrl(9)(18 downto 17);
+
+
+      cfg_add_factor_t0 <= ctrl(10)(7 downto 0);
+      cfg_add_factor_t1 <= ctrl(10)(23 downto 8);
+      cfg_add_factor_t2 <= ctrl(10)(31 downto 24);
 
       valid_len <= to_integer(unsigned(ctrl(9)(4 downto 1)));
 

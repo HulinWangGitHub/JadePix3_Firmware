@@ -54,15 +54,15 @@ entity jadepix_ctrl is
     CON_DATA : out std_logic;
 
     -- chip config fifo
-    cfg_sync       : in  jadepix_cfg;
-    cfg_fifo_rst   : in  std_logic;
-    cfg_dout       : out std_logic_vector(2 downto 0);
-    cfg_rd_en      : out std_logic;
-    cfg_dout_valid : out std_logic;
-    cfg_busy       : out std_logic;
-    cfg_fifo_empty : in std_logic;
-    cfg_fifo_pfull : in std_logic;
-    cfg_fifo_count : in std_logic_vector(17 downto 0);
+    cfg_sync          : in  jadepix_cfg;
+    cfg_fifo_rst      : in  std_logic;
+    cfg_busy          : out std_logic;
+    cfg_fifo_empty    : out std_logic;
+    cfg_fifo_pfull    : out std_logic;
+    cfg_fifo_count    : out std_logic_vector(CFG_FIFO_COUNT_WITDH-1 downto 0);
+    cfg_add_factor_t0 : in  std_logic_vector(7 downto 0);
+    cfg_add_factor_t1 : in  std_logic_vector(15 downto 0);
+    cfg_add_factor_t2 : in  std_logic_vector(7 downto 0);
 
     digsel_en_rs : out std_logic;
     anasel_en_gs : out std_logic;
@@ -119,10 +119,10 @@ architecture behv of jadepix_ctrl is
 
   -- FIFO
   signal empty, prog_full, fifo_rst : std_logic;
---  signal cfg_dout                   : std_logic_vector(2 downto 0);
---  signal cfg_rd_en, cfg_dout_valid  : std_logic;
+  signal cfg_dout                   : std_logic_vector(2 downto 0);
+  signal cfg_rd_en, cfg_dout_valid  : std_logic;
   signal pix_cnt                    : integer range 0 to (N_ROW * N_COL - 1) := 0;
-  signal cfg_cnt                    : integer range 0 to JADEPIX_CFG_CNT_MAX := 0;
+  signal cfg_cnt                    : std_logic_vector(19 downto 0)          := (others => '0');
 
   -- RS
 --  signal start_cache   : std_logic                                 := '0';
@@ -171,6 +171,7 @@ architecture behv of jadepix_ctrl is
   attribute mark_debug of rs_cnt         : signal is "true";
   attribute mark_debug of cfg_busy       : signal is "true";
   attribute mark_debug of rs_busy        : signal is "true";
+  attribute mark_debug of gs_busy        : signal is "true";
   attribute mark_debug of cfg_start      : signal is "true";
   attribute mark_debug of rs_start       : signal is "true";
   attribute mark_debug of gs_start       : signal is "true";
@@ -212,7 +213,7 @@ architecture behv of jadepix_ctrl is
       full       : out std_logic;
       empty      : out std_logic;
       valid      : out std_logic;
-      data_count : out std_logic_vector(16 downto 0);
+      data_count : out std_logic_vector(CFG_FIFO_COUNT_WITDH-1 downto 0);
       prog_full  : out std_logic
       );
   end component;
@@ -281,17 +282,17 @@ begin
         end if;
 
       when CFG_EN_DATA =>
-        if cfg_cnt = 2 then
+        if cfg_cnt = cfg_add_factor_t0 + 2 then
           state_next <= CFG_EN_SEL;
         end if;
 
       when CFG_EN_SEL =>
-        if cfg_cnt = 14 then
+        if cfg_cnt = cfg_add_factor_t0 + cfg_add_factor_t1 + 14 then
           state_next <= CFG_DIS_SEL;
         end if;
 
       when CFG_DIS_SEL =>
-        if cfg_cnt = (JADEPIX_CFG_CNT_MAX) then
+        if cfg_cnt = cfg_add_factor_t0 + cfg_add_factor_t1 + cfg_add_factor_t2 + 16 then
           state_next <= CFG_NEXT_PIX;
         end if;
 
@@ -439,7 +440,7 @@ begin
           cfg_rd_en <= '0';
           cfg_busy  <= '0';
           pix_cnt   <= 0;
-          cfg_cnt   <= 0;
+          cfg_cnt   <= (others => '0');
           CON_SELM  <= '0';
           CON_SELP  <= '0';
           CON_DATA  <= '0';
@@ -496,7 +497,7 @@ begin
 
         when CFG_NEXT_PIX =>
           pix_cnt  <= pix_cnt + 1;
-          cfg_cnt  <= 0;
+          cfg_cnt  <= (others => '0');
           CON_DATA <= '0';
           RA_EN    <= '0';
           CA_EN    <= '0';
@@ -511,7 +512,7 @@ begin
           cfg_rd_en   <= '0';
           cfg_busy    <= '0';
           pix_cnt     <= 0;
-          cfg_cnt     <= 0;
+          cfg_cnt     <= (others => '0');
           CON_SELM    <= '0';
           CON_SELP    <= '0';
           CON_DATA    <= '0';
@@ -608,6 +609,7 @@ begin
 
         when GS_GO =>
           CA           <= gs_col;
+          CA_EN        <= '1';
           anasel_en_gs <= '1';
           gs_busy      <= '1';
           is_gs        <= '1';
@@ -643,7 +645,8 @@ begin
           gs_pulse_deassert_counter <= (others => '0');
           gs_deassert_counter       <= (others => '0');
 
-          CA <= (others => '0');
+          CA    <= (others => '0');
+          CA_EN <= '0';
 
         when others => null;
       end case;
@@ -699,20 +702,20 @@ begin
     end if;
   end process;
 
---  conf_fifo : fifo_generator_0
---    port map (
---      clk        => clk,
---      srst       => fifo_rst,
---      din        => cfg_sync.din,
---      wr_en      => cfg_sync.wr_en,
---      rd_en      => cfg_rd_en,
---      dout       => cfg_dout,
---      full       => open,
---      empty      => cfg_fifo_empty,
---      valid      => cfg_dout_valid,
---      data_count => cfg_fifo_count,
---      prog_full  => cfg_fifo_pfull
---      );
+  conf_fifo : fifo_generator_0
+    port map (
+      clk        => clk,
+      srst       => fifo_rst,
+      din        => cfg_sync.din,
+      wr_en      => cfg_sync.wr_en,
+      rd_en      => cfg_rd_en,
+      dout       => cfg_dout,
+      full       => open,
+      empty      => cfg_fifo_empty,
+      valid      => cfg_dout_valid,
+      data_count => cfg_fifo_count,
+      prog_full  => cfg_fifo_pfull
+      );
 
 
 end behv;
